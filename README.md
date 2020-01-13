@@ -7,8 +7,8 @@ Support varaibles and funcions definions.
 
 Supported operators:
 
-* + 
-* -
+* \+ 
+* \-
 * =
 * \>=
 * <=
