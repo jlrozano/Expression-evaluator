@@ -1,106 +1,114 @@
 // BASED ON OLD Parser Zeos library.
-{******************************************************************
-*  (c)copyrights Corona Ltd. Donetsk 1999
-*  Project: Zeos Library
-*  Module: Formula parser component
-*  Author: Sergey Seroukhov   E-Mail: voland@cm.dongu.donetsk.ua
-*  Date: 26/03/99
-*
-*  List of changes:
-*  27/03/99 - Class convert to component, add vars
-*  16/04/99 - Add some functions, operators LIKE, XOR
-*******************************************************************}
-
+{ ******************************************************************
+  *  (c)copyrights Corona Ltd. Donetsk 1999
+  *  Project: Zeos Library
+  *  Module: Formula parser component
+  *  Author: Sergey Seroukhov   E-Mail: voland@cm.dongu.donetsk.ua
+  *  Date: 26/03/99
+  *
+  *  List of changes:
+  *  27/03/99 - Class convert to component, add vars
+  *  16/04/99 - Add some functions, operators LIKE, XOR
+  ******************************************************************* }
 
 unit SGT.Parser.ZParser;
 
 interface
-uses SysUtils, Classes, Sgt.Parser.ZToken, SGt.Parser.ZMatch, Variants,
-    Rtti, SGT.ListIntf, Generics.Collections;
+
+uses SysUtils, Classes, SGT.Parser.ZToken, SGT.Parser.ZMatch, Variants,
+  Rtti, Generics.Collections;
 
 type
 
-TParseItemType=(ptFunction, ptVariable, ptDelim, ptString, ptInteger, ptFloat,
-                ptBoolean,  ptNull);
+  TParseItemType = (ptFunction, ptVariable, ptDelim, ptString, ptInteger,
+    ptFloat, ptBoolean, ptNull);
 
-TParseItem = record
-  ItemValue: Variant;
-  ItemType: TParseItemType;
-end;
+  TParseItem = record
+    ItemValue: Variant;
+    ItemType: TParseItemType;
+  end;
 
-TParser = class;
+  TParser = class;
 
-EParseException = class(Exception);
+  EParseException = class(Exception);
 
-TOnGetVar = procedure (sender: TParser; VarName: string; var Value: Variant) of object;
+  TOnGetVar = procedure(sender: TParser; VarName: string; var Value: Variant)
+    of object;
 
-TFunction = function (Sender: TParser; const Args: Array of Variant): Variant;
+  TGetVar = reference to procedure (sender: TParser; VarName: string; var Value: Variant);
 
-TParser = class
-private
-  class var FFunctions: TDictionary<String, TFunction>;
-  class function GetGlobalFunction(const FuncName: String): TFunction;
-  class constructor Create;
-  class destructor Destroy;
-public
-  class procedure AddFunction(const FuncName: String; FunctionCode: TFunction);
-private
-  FParseItems: TList<TParseItem>;
-  FLocalFunctions: TDictionary<String, TFunction>;
-  FErrCheck: Integer;
-  FEquation: String;
-  FParseStack: TStack<Variant>;
-  FVariables: TList<String>;
-  FOnGetVar: TOnGetVar;
-  function ExtractTokenEx(var Buffer, Token: String): TParseItemType;
-  function OpLevel(Operat: String): Integer;
-  function Parse(Level: Integer; var Buffer: String): Integer;
-  procedure SetEquation(Value: String);
-  procedure CheckTypes(var Value1,Value2: Variant; IsForOp:Boolean=FALSE);
-  function ConvType(Value: Variant): Variant;
-  function CheckFunc(var Buffer: String): Boolean;
-  function EvalFunction(const ParseItem:TParseItem): Variant;
-  procedure Push(const Value: Variant);
-  function Pop: Variant;
-  function GetVariables: TArray<String>;
-  function GetFunction(FuncName: String): TFunction;
-protected
-  function DoGetVar(VarName: String): Variant; Virtual;
-public
-  constructor Create;
-  destructor Destroy; override;
-  function Evalute: Variant;
-  procedure AddLocalFunction(const Name: String; AFunction: TFunction);
-  procedure Clear;
-  property Equation: String read FEquation write SetEquation;
-  property OnGetVar: TOnGetVar read FOnGetVar write FOnGetVar;
-  property Variables: TArray<String> read GetVariables;
-end;
+  TFunction = function(sender: TParser; const Args: Array of Variant): Variant;
 
-procedure CheckParamCount(const Args: Array of Variant; ArgCount: byte;  const FuncName: String); overload;
-procedure CheckParamCount(const Args: Array of Variant; ArgCount: Array of byte;  const FuncName: String); overload;
+  TParser = class
+  private
+    class var FFunctions: TDictionary<String, TFunction>;
+    class function GetGlobalFunction(const FuncName: String): TFunction;
+    class constructor Create;
+    class destructor Destroy;
+  public
+    class procedure AddFunction(const FuncName: String;
+      FunctionCode: TFunction);
+  private
+    FParseItems: TList<TParseItem>;
+    FLocalFunctions: TDictionary<String, TFunction>;
+    FErrCheck: Integer;
+    FEquation: String;
+    FParseStack: TStack<Variant>;
+    FVariables: TList<String>;
+    FOnGetVar: TOnGetVar;
+    FGetVar: TGetVar;
+    function ExtractTokenEx(var Buffer, Token: String): TParseItemType;
+    function OpLevel(Operat: String): Integer;
+    function Parse(Level: Integer; var Buffer: String): Integer;
+    procedure SetEquation(Value: String);
+    procedure CheckTypes(var Value1, Value2: Variant; IsForOp: Boolean = FALSE);
+    function ConvType(Value: Variant): Variant;
+    function CheckFunc(var Buffer: String): Boolean;
+    function EvalFunction(const ParseItem: TParseItem): Variant;
+    procedure Push(const Value: Variant);
+    function Pop: Variant;
+    function GetVariables: TArray<String>;
+    function GetFunction(FuncName: String): TFunction;
+  protected
+    function DoGetVar(VarName: String): Variant; Virtual;
+  public
+    constructor Create(GetVarFunction: TGetVar = nil);
+    destructor Destroy; override;
+    function Evalute: Variant; overload;
+    function Evalute<T>: T; overload;
+    procedure AddLocalFunction(const Name: String; AFunction: TFunction);
+    procedure Clear;
+    property Equation: String read FEquation write SetEquation;
+    property OnGetVar: TOnGetVar read FOnGetVar write FOnGetVar;
+
+    property Variables: TArray<String> read GetVariables;
+  end;
+
+procedure CheckParamCount(const Args: Array of Variant; ArgCount: byte;
+  const FuncName: String); overload;
+procedure CheckParamCount(const Args: Array of Variant; ArgCount: Array of byte;
+  const FuncName: String); overload;
+
+resourcestring
+  rsInvalidParamsNo = 'Invalid param count in function %s';
+  rsSyntaxError = 'Syntax error.';
+  rsIndexOutOfRange = 'Index out of range.';
+  rsTypesmismatch = 'Type mismatch.';
+  rsFunctionNotFound = 'Function %s don''t. exists.';
+  rsDuplicateFunction = 'Duplicate funcion name (%s).';
 
 implementation
 
-ResourceString
-   rsInvalidParamsNo ='Invalid param count in function %s';
-   rsSyntaxError     ='Syntax error.';
-   rsIndexOutOfRange ='Index out of range.';
-   rsTypesmismatch   ='Type mismatch.';
-   rsFunctionNotFound='Function %s don''t. exists.' ;
-   rsDuplicateFunction='Duplicate funcion name (%s).';
-
-function VarIsNull(const V: variant): boolean;
+function VarIsNull(const V: Variant): Boolean;
 begin
-
-  result:= Variants.VarIsNull(V) Or VarIsEmpty(V);
+  result := Variants.VarIsNull(V) Or VarIsEmpty(V);
 end;
 
 { TParserFuncion }
 
-function TParser.GetFunction( FuncName:string): TFunction;
+function TParser.GetFunction(FuncName: string): TFunction;
 begin
-  FuncName:= LowerCase(FuncName);
+  FuncName := LowerCase(FuncName);
   if not FLocalFunctions.TryGetValue(FuncName, result) then
     FFunctions.TryGetValue(FuncName, result);
 end;
@@ -112,184 +120,46 @@ end;
 
 function TParser.GetVariables: TArray<String>;
 begin
-  result:= FVariables.ToArray;
+  result := FVariables.ToArray;
 end;
 
-{************** User functions implementation **************}
+{ ************** User functions implementation ************** }
 
-procedure CheckParamCount(const Args: Array of Variant; ArgCount: Array of Byte;  const FuncName: String); overload;
+procedure CheckParamCount(const Args: Array of Variant; ArgCount: Array of byte;
+  const FuncName: String); overload;
 var
   LOk: Boolean;
-  Lb, LArg: Byte;
+  Lb, LArg: byte;
 begin
-  Larg:= Length(Args);
-  for lb in ArgCount do if lb= Larg then exit;
+  LArg := Length(Args);
+  for Lb in ArgCount do
+    if Lb = LArg then
+      exit;
 
-  raise EParseException.CreateFmt(rsInvalidParamsNo,[FuncName]);
+  raise EParseException.CreateFmt(rsInvalidParamsNo, [FuncName]);
 end;
 
-
-procedure CheckParamCount(const Args: Array of Variant; ArgCount: Byte;  const FuncName: String); overload;
+procedure CheckParamCount(const Args: Array of Variant; ArgCount: byte;
+  const FuncName: String); overload;
 begin
-  CheckParamCount(Args,[ArgCount], FuncName);
+  CheckParamCount(Args, [ArgCount], FuncName);
 end;
 
-
-// Get current date and time
-function Now_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 0, 'Now');
-  Result := Now
-end;
-
-function FormatNum_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 2, 'FormatNum');
-  if Result<>2 then
-    EParseException.CreateFmt(rsInvalidParamsNo,['FormatNum']);
-  Result := FormatFloat(Args[0], Args[1]);
-end;
-
-function Fcur_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 1, 'FCur');
-  Result := FormatFloat(',##0.00 €',Args[0]);
-end;
-
-function IsNull_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 1, 'IsNull');
-  Result := VarIsNull(Args[0]) Or VarIsEmpty(Args[0]);
-end;
-
-function FNum_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 1, 'FNum');
-  Result := Format('%n',[Args[0]]);
-end;
-
-function StrPos_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 2, 'StrPos');
-  Result := Pos(Args[0],Args[1]);
-end;
-
-function Replace_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 3, 'Replace');
-  Result := StringReplace(Args[0],Args[1],Args[2],[rfIgnoreCase])
-end;
-
-function ReplaceAll_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 3, 'ReplaceAll');
-  Result := StringReplace(Args[0],Args[1],Args[2],[rfIgnoreCase, rfReplaceAll])
-end;
-
-
-function StrCopy_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 3, 'StrCopy');
-  Result := Copy(Args[0], Integer(Args[1]), Integer(Args[2]));
-end;
-
-function StrLen_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 1, 'StrLen');
-  Result := Length(Args[0]);
-end;
-
-function IIf_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 3, 'Iif');
-  if Boolean(VarAsType(Args[0], varBoolean)) then result:= Args[1]
-  else result:= Args[2];
-end;
-
-
-
-function Upper_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 1, 'Upper');
-  result:=AnsiUpperCase(Args[0]);
-end;
-
-function Lower_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 1, 'Lower');
-  result:=AnsiLowerCase(Args[0]);
-end;
-
-
-
-function Date_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 1, 'Date');
-  Result := Date //FormatDateTime('yyyy-mm-dd hh:nn:ss', Now());
-end;
-
-function FormatDate_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-begin
-  CheckParamCount(Args, 2, 'FomatDate');
-  result:= FormatDateTime(Args[0], Args[1])
-end;
-
-function GetItem_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-var
-  LList: IListInterface;
-  LValue: TValue;
-begin
-  CheckParamCount(Args, 2, 'GetListItem');
-  if VarType(Args[0])= varInteger then
-    LValue:= TObject(Integer(Args[0]))
-  else
-    LValue:= TValue.FromVariant(Args[0]);
-  LList:= TListInterface.Get(Lvalue);
-  if LList=nil then
-    raise Exception.Create('Error GetItem function. Parameter not is a list');
-
-  try
-    LValue:= LList.GetItem(Args[1]);
-    result:= LValue.AsVariant;
-  finally
-    LList.DetachList;
-  end;
-end;
-
-function GetListCount_Execute(Sender: TParser; const Args: Array of Variant): Variant;
-var
-  LList: IListInterface;
-  LValue: TValue;
-begin
-  CheckParamCount(Args, 1, 'GetListSize');
-  if VarType(Args[0])= varInteger then
-    LValue:= TObject(Integer(Args[0]))
-  else
-    LValue:= TValue.FromVariant(Args[0]);
-  LList:= TListInterface.Get(Lvalue);
-  if LList=nil then
-    raise Exception.Create('Error GetListSize function. Parameter not is a list');
-  try
-    result:= LList.Size;
-  finally
-    LList.DetachList;
-  end;
-end;
-
-{******************* TParser implementation ****************}
+{ ******************* TParser implementation **************** }
 
 constructor TParser.Create;
 begin
   inherited Create;
-  FParseItems:= TList<TParseItem>.Create;
-  FParseItems.Capacity:=10;
+  FParseItems := TList<TParseItem>.Create;
+  FParseItems.Capacity := 10;
 
-  FParseStack:= TStack<Variant>.Create;
-  FparseStack.Capacity:= 10;
+  FParseStack := TStack<Variant>.Create;
+  FParseStack.Capacity := 10;
 
-  FVariables:= TList<String>.Create;
+  FVariables := TList<String>.Create;
   FErrCheck := 0;
-  FLocalFunctions:= TDictionary<String, TFunction>.Create;
+  FLocalFunctions := TDictionary<String, TFunction>.Create;
+  FGetVar := GetVarFunction;
 end;
 
 // Class destructor
@@ -299,7 +169,7 @@ begin
   FParseStack.Free;
   FLocalFunctions.Free;
   FVariables.Free;
-  inherited destroy;
+  inherited Destroy;
 end;
 
 // Extract highlevel lexem
@@ -311,103 +181,137 @@ var
 begin
   repeat
     TokenType := ExtractToken(Buffer, Token);
-  until (Token<>#10)and(Token<>#13);
+  until (Token <> #10) and (Token <> #13);
 
-  if Token='[' then begin
+  if Token = '[' then
+  begin
     TokenType := ttAlpha;
-    P := Pos(']',Buffer); Token := '';
-    if P>0 then begin
-      Token := Copy(Buffer,1,P-1);
-      Buffer := Copy(Buffer,P+1,Length(Buffer)-P);
+    P := Pos(']', Buffer);
+    Token := '';
+    if P > 0 then
+    begin
+      Token := Copy(Buffer, 1, P - 1);
+      Buffer := Copy(Buffer, P + 1, Length(Buffer) - P);
     end;
   end;
 
-  if Token='#' then begin
-    p:=Pos('#',Buffer); Token:='';
-    if p>0 then begin
-      Token:=Copy(Buffer,1,p-1);
-      Token:=FloatToStr(StrToDateTime(Token));
-      if FormatSettings.DecimalSeparator<>'.' then
-        Token:=StringReplace(Token,FormatSettings.DecimalSeparator,'.',[]);
-      if Pos('.',Token)=0 then Token:=Token+'.0';
-      Buffer := Copy(Buffer,P+1,Length(Buffer)-P);
-      Result:=ptFloat;
+  if Token = '#' then
+  begin
+    P := Pos('#', Buffer);
+    Token := '';
+    if P > 0 then
+    begin
+      Token := Copy(Buffer, 1, P - 1);
+      Token := FloatToStr(StrToDateTime(Token));
+      if FormatSettings.DecimalSeparator <> '.' then
+        Token := StringReplace(Token, FormatSettings.DecimalSeparator, '.', []);
+      if Pos('.', Token) = 0 then
+        Token := Token + '.0';
+      Buffer := Copy(Buffer, P + 1, Length(Buffer) - P);
+      result := ptFloat;
     end;
     exit;
   end;
 
-  if (Buffer<>'')and(Token='>')and(Buffer[1]='=') then begin
+  if (Buffer <> '') and (Token = '>') and (Buffer[1] = '=') then
+  begin
     ExtractToken(Buffer, Temp);
     Token := Token + Temp;
   end;
-  if (Buffer<>'')and(Token='<')and((Buffer[1]='=')or(Buffer[1]='>')) then begin
+  if (Buffer <> '') and (Token = '<') and
+    ((Buffer[1] = '=') or (Buffer[1] = '>')) then
+  begin
     ExtractToken(Buffer, Temp);
     Token := Token + Temp;
   end;
 
   Temp := UpperCase(Token);
-  if (Temp='AND') or (Temp='NOT') or (Temp='OR') or (Temp='XOR') or (Temp='IN') or
-     (Temp='LIKE') then begin
+  if (Temp = 'AND') or (Temp = 'NOT') or (Temp = 'OR') or (Temp = 'XOR') or
+    (Temp = 'IN') or (Temp = 'LIKE') then
+  begin
     Token := Temp;
-    Result := ptDelim;
+    result := ptDelim;
     exit;
   end;
-  if (Temp='TRUE') or (Temp='FALSE') then begin
+  if (Temp = 'TRUE') or (Temp = 'FALSE') then
+  begin
     Token := Temp;
-    Result := ptBoolean;
+    result := ptBoolean;
     exit;
   end;
-  if Temp='NULL' then begin
+  if Temp = 'NULL' then
+  begin
     Token := Temp;
-    Result := ptNull;
+    result := ptNull;
     exit;
   end;
-  if Temp='IS' then begin
-    Token:='=';
-    Result:=ptDelim;
+  if Temp = 'IS' then
+  begin
+    Token := '=';
+    result := ptDelim;
     exit;
   end;
   case TokenType of
-    ttString: if Pos(FormatSettings.DateSeparator,Token) in [2,3] then begin
-                try
-                  Temp:= FloatToStr(StrToDateTime(Copy(Token,2,Length(Token)-2)));
-                  if FormatSettings.DecimalSeparator<>'.' then
-                    Token:= StringReplace(Temp,FormatSettings.DecimalSeparator,'.',[])
-                  else Token:= Temp;
-                  Result:= ptFloat;
-                except
-                  Result:= ptString;
-                end;
-              end else Result:= ptString;
-    ttAlpha: Result := ptVariable;
-    ttDelim: Result := ptDelim;
-    ttDigit: begin
-        if (Buffer<>'') and (Buffer[1]='.') then begin
+    ttString:
+      if Pos(FormatSettings.DateSeparator, Token) in [2, 3] then
+      begin
+        try
+          Temp := FloatToStr(StrToDateTime(Copy(Token, 2, Length(Token) - 2)));
+          if FormatSettings.DecimalSeparator <> '.' then
+            Token := StringReplace(Temp,
+              FormatSettings.DecimalSeparator, '.', [])
+          else
+            Token := Temp;
+          result := ptFloat;
+        except
+          result := ptString;
+        end;
+      end
+      else
+        result := ptString;
+    ttAlpha:
+      result := ptVariable;
+    ttDelim:
+      result := ptDelim;
+    ttDigit:
+      begin
+        if (Buffer <> '') and (Buffer[1] = '.') then
+        begin
           ExtractToken(Buffer, Temp);
           Token := Token + '.';
-          if (Buffer<>'')and(Buffer[1]>='0')and(Buffer[1]<='9') then begin
-            ExtractToken(Buffer,Temp);
+          if (Buffer <> '') and (Buffer[1] >= '0') and (Buffer[1] <= '9') then
+          begin
+            ExtractToken(Buffer, Temp);
             Token := Token + Temp;
           end;
-          Result := ptFloat;
-        end else Result := ptInteger;
+          result := ptFloat;
+        end
+        else
+          result := ptInteger;
       end;
   end;
 end;
 
 // Get priority level of operation
 function TParser.OpLevel(Operat: String): Integer;
-var Temp: String;
+var
+  Temp: String;
 begin
-  Result := 7;
+  result := 7;
   Temp := UpperCase(Operat);
-  if (Temp='AND') or (Temp='OR') or (Temp='XOR') then Result := 1;
-  if (Temp='NOT') then Result := 2;
-  if (Temp='<')or(Temp='>')or(Temp='=')or(Temp='>=')or(Temp='<=')
-    or(Temp='<>') then Result := 3;
-  if (Temp[1]='+') or (Temp[1]='-') or (Temp='LIKE') then Result := 4;
-  if (Temp[1]='/') or (Temp[1]='*') or (Temp[1]='%') then Result := 5;
-  if (Temp[1]='^') then Result := 6;
+  if (Temp = 'AND') or (Temp = 'OR') or (Temp = 'XOR') then
+    result := 1;
+  if (Temp = 'NOT') then
+    result := 2;
+  if (Temp = '<') or (Temp = '>') or (Temp = '=') or (Temp = '>=') or
+    (Temp = '<=') or (Temp = '<>') then
+    result := 3;
+  if (Temp[1] = '+') or (Temp[1] = '-') or (Temp = 'LIKE') then
+    result := 4;
+  if (Temp[1] = '/') or (Temp[1] = '*') or (Temp[1] = '%') then
+    result := 5;
+  if (Temp[1] = '^') then
+    result := 6;
 end;
 
 // Internal convert equation from infix form to postfix
@@ -419,133 +323,160 @@ var
   NewLevel: Integer;
   IValue: Variant;
 
-  procedure AddParseItem(Value:Variant; _Type: TParseItemType);
-  var Item: TParseItem;
+  procedure AddParseItem(Value: Variant; _Type: TParseItemType);
+  var
+    Item: TParseItem;
   begin
-    Item.ItemValue:= Value;
-    Item.ItemType:= _Type;
+    Item.ItemValue := Value;
+    Item.ItemType := _Type;
     FParseItems.Add(Item);
   end;
 
   procedure ExtractParams;
-  var Params, SaveCount: Integer;
+  var
+    Params, SaveCount: Integer;
   begin
-    SaveCount:= FParseItems.Count;
+    SaveCount := FParseItems.Count;
     Params := 0;
     repeat
       FErrCheck := 0;
-      Parse(0,Buffer);
+      Parse(0, Buffer);
       ExtractTokenEx(Buffer, Token);
-      if Token ='' then
-        raise EParseException.Create(rsSyntaxerror);
+      if Token = '' then
+        raise EParseException.Create(rsSyntaxError);
       case Token[1] of
-        ',': begin
+        ',':
+          begin
             Inc(Params);
             continue;
           end;
-        ')': begin
-            if SaveCount<{FParseCount}FParseItems.Count then Inc(Params);
-            {FParseItems[FParseCount].ItemValue := ConvType(Params);
-            FParseItems[FParseCount].ItemType := ptInteger;
-            Inc(FParseCount);}
-            AddParseItem(ConvType(Params),ptInteger);
+        ')':
+          begin
+            if SaveCount < { FParseCount } FParseItems.Count then
+              Inc(Params);
+            { FParseItems[FParseCount].ItemValue := ConvType(Params);
+              FParseItems[FParseCount].ItemType := ptInteger;
+              Inc(FParseCount); }
+            AddParseItem(ConvType(Params), ptInteger);
             break;
           end;
-        else
-          raise EParseException.Create(rsSyntaxerror);
+      else
+        raise EParseException.Create(rsSyntaxError);
       end;
-    until Buffer='';
+    until Buffer = '';
   end;
 
 begin
-  Result := 0;
-  while Buffer<>'' do begin
+  result := 0;
+  while Buffer <> '' do
+  begin
     ParseType := ExtractTokenEx(Buffer, Token);
-    if Token='' then exit;
-    if (Token=')') or (Token=',') then begin
+    if Token = '' then
+      exit;
+    if (Token = ')') or (Token = ',') then
+    begin
       PutbackToken(Buffer, Token);
       exit;
     end;
-    if Token='(' then begin
+    if Token = '(' then
+    begin
       FErrCheck := 0;
-      Parse(0,Buffer);
+      Parse(0, Buffer);
       ExtractTokenEx(Buffer, Token);
-      if Token<>')' then
+      if Token <> ')' then
         raise EParseException.Create(rsSyntaxError);
       FErrCheck := 1;
       continue;
     end;
 
-    if ParseType=ptDelim then begin
+    if ParseType = ptDelim then
+    begin
       NewLevel := OpLevel(Token);
-      if (FErrCheck=2)and(Token<>'NOT') then
+      if (FErrCheck = 2) and (Token <> 'NOT') then
         raise EParseException.Create(rsSyntaxError);
-      if FErrCheck=0 then
-        if (Token<>'NOT')and(Token<>'+')and(Token<>'-') then
+      if FErrCheck = 0 then
+        if (Token <> 'NOT') and (Token <> '+') and (Token <> '-') then
           raise EParseException.Create(rsSyntaxError)
-        else if Token<>'NOT' then NewLevel := 6;
+        else if Token <> 'NOT' then
+          NewLevel := 6;
 
-      if (Token<>'NOT')and(NewLevel<=Level) then begin
+      if (Token <> 'NOT') and (NewLevel <= Level) then
+      begin
         PutbackToken(Buffer, Token);
-        Result := NewLevel;
+        result := NewLevel;
         exit;
-      end else if (Token='NOT')and(NewLevel<Level) then begin
+      end
+      else if (Token = 'NOT') and (NewLevel < Level) then
+      begin
         PutbackToken(Buffer, Token);
-        Result := NewLevel;
+        result := NewLevel;
         exit;
       end;
 
-      if (FErrCheck=0) and (Token='+') then continue;
-      if (FErrCheck=0) and (Token='-') then Token := '~';
+      if (FErrCheck = 0) and (Token = '+') then
+        continue;
+      if (FErrCheck = 0) and (Token = '-') then
+        Token := '~';
       FErrCheck := 2;
-      if Token<>'IN' then begin
-        while (Buffer<>'')and(Buffer[1]<>')')and(Parse(NewLevel, Buffer)>NewLevel) do;
-      end else
-        if not CheckFunc(buffer) then raise EParseException.Create(rsSyntaxError)
-        else begin
-          FuncName:=Token;
-          ExtractParams;
-          Token:=FuncName;
-        end;
-      AddParseItem(Token,ptDelim);
-      Result := NewLevel;
+      if Token <> 'IN' then
+      begin
+        while (Buffer <> '') and (Buffer[1] <> ')') and
+          (Parse(NewLevel, Buffer) > NewLevel) do;
+      end
+      else if not CheckFunc(Buffer) then
+        raise EParseException.Create(rsSyntaxError)
+      else
+      begin
+        FuncName := Token;
+        ExtractParams;
+        Token := FuncName;
+      end;
+      AddParseItem(Token, ptDelim);
+      result := NewLevel;
       continue;
     end;
 
-    if FErrCheck=1 then
+    if FErrCheck = 1 then
       raise EParseException.Create(rsSyntaxError);
     FErrCheck := 1;
     case ParseType of
-      ptVariable: begin
-          //FParseItems[FParseCount].ItemValue := Token;
-          IValue:=Token;
-          if CheckFunc(Buffer) then ParseType := ptFunction
+      ptVariable:
+        begin
+          // FParseItems[FParseCount].ItemValue := Token;
+          IValue := Token;
+          if CheckFunc(Buffer) then
+            ParseType := ptFunction
         end;
-      ptNull:   IValue:=NULL;
-      ptInteger: //FParseItems[FParseCount].ItemValue := StrToInt(Token);
-                IValue:=StrToInt(Token);
-      ptFloat: begin
+      ptNull:
+        IValue := NULL;
+      ptInteger: // FParseItems[FParseCount].ItemValue := StrToInt(Token);
+        IValue := StrToInt(Token);
+      ptFloat:
+        begin
           Temp := FormatSettings.DecimalSeparator;
           FormatSettings.DecimalSeparator := '.';
-          IValue:=StrToFloat(Token);
+          IValue := StrToFloat(Token);
           FormatSettings.DecimalSeparator := Temp;
         end;
-      ptString: begin
+      ptString:
+        begin
           DeleteQuotes(Token);
-          IValue:=Token;
+          IValue := Token;
         end;
-      ptBoolean: IValue:=Token='TRUE';
+      ptBoolean:
+        IValue := Token = 'TRUE';
     end;
-    if ParseType = ptFunction then begin
+    if ParseType = ptFunction then
+    begin
       FuncName := UpperCase(Token);
       ExtractParams;
-      IValue:=FuncName;
+      IValue := FuncName;
     end
-    else
-    if (ParseType = ptVariable) And not FVariables.Contains(LowerCase(token)) then
-      FVariables.Add(LowerCase(token));
+    else if (ParseType = ptVariable) And not FVariables.Contains
+      (LowerCase(Token)) then
+      FVariables.Add(LowerCase(Token));
 
-    AddParseItem(ConvType(IValue),ParseType);
+    AddParseItem(ConvType(IValue), ParseType);
   end;
 end;
 
@@ -553,11 +484,12 @@ end;
 // Value - equation buffer
 procedure TParser.SetEquation(Value: String);
 begin
-  //FParseCount := 0;
+  // FParseCount := 0;
   Clear;
   FErrCheck := 0;
   FEquation := Value;
-  while Value<>'' do Parse(0, Value);
+  while Value <> '' do
+    Parse(0, Value);
 
   FVariables.TrimExcess;
 end;
@@ -567,269 +499,337 @@ function TParser.ConvType(Value: Variant): Variant;
 begin
   case VarType(Value) of
     varByte, varSmallint, varInteger:
-      Result := VarAsType(Value, varInteger);
+      result := VarAsType(Value, varInteger);
     varSingle, varDouble, varCurrency:
-      Result := VarAsType(Value, varDouble);
+      result := VarAsType(Value, varDouble);
     varOleStr, varString, varVariant, varUString:
-      Result := VarAsType(Value, varString);
-    varDate: Result:=Double(varToDateTime(Value));
+      result := VarAsType(Value, varString);
+    varDate:
+      result := Double(varToDateTime(Value));
     varBoolean:
-      Result := Value;
-    varNull: Result:=NULL;
+      result := Value;
+    varNull:
+      result := NULL;
   else
-      raise EParseException.Create(rsTypesmismatch);
+    raise EParseException.Create(rsTypesmismatch);
   end;
 end;
 
 class constructor TParser.Create;
 begin
-  FFunctions:= TDictionary<String, TFunction>.Create;
-  AddFunction('now',Now_Execute);
-  AddFunction('iif',Iif_Execute);
-  AddFunction('strcopy',StrCopy_Execute);
-  AddFunction('upper',Upper_Execute);
-  AddFunction('lower',lower_Execute);
-  AddFunction('date',Date_Execute);
-  AddFunction('formatdate',FormatDate_Execute);
-  AddFunction('replace',Replace_Execute);
-  AddFunction('RepalceAll',ReplaceAll_Execute);
-  AddFunction('strpos', StrPos_Execute);
-  AddFunction('FormatNum',FormatNum_Execute);
-  AddFunction('fcur',FCur_Execute);
-  AddFunction('fnum',FNum_Execute);
-  AddFunction('isnull',IsNull_Execute);
-  AddFunction('strlen',StrLen_Execute);
-  AddFunction('getlistitem',GetItem_Execute);
-  AddFunction('getlistsize',GetListCount_Execute);
+  FFunctions := TDictionary<String, TFunction>.Create;
 end;
 
 function StrToFloatEx(Value: String): Double;
-var Temp: Char;
+var
+  Temp: Char;
 begin
-  Result := 0;
-  if Value<>'' then begin
+  result := 0;
+  if Value <> '' then
+  begin
     Temp := FormatSettings.DecimalSeparator;
     FormatSettings.DecimalSeparator := '.';
-    try Result := StrToFloat(Value);
-    except Result := 0; end;
+    try
+      result := StrToFloat(Value);
+    except
+      result := 0;
+    end;
     FormatSettings.DecimalSeparator := Temp;
   end;
 end;
 
 // Convert types of two variant values
-procedure TParser.CheckTypes(var Value1,Value2: Variant; isForOp:Boolean=FALSE);
+procedure TParser.CheckTypes(var Value1, Value2: Variant;
+  IsForOp: Boolean = FALSE);
 begin
   case VarType(Value1) of
-    varInt64,
-    varSmallInt,
-    varByte,
-    varWord,
-    varLongWord,
-    varUInt64,
-    varInteger:
-      case varType(Value2) of
-         varString,varOleStr: Value2 := StrToFloatEx(Value2);
-         varNull: if isForOp then Value2:=0;
-         varDouble: begin end;
-        else Value2 := VarAsType(Value2, varInteger);
+    varInt64, varSmallint, varByte, varWord, varLongWord, varUInt64, varInteger:
+      case VarType(Value2) of
+        varString, varOleStr:
+          Value2 := StrToFloatEx(Value2);
+        varNull:
+          if IsForOp then
+            Value2 := 0;
+        varDouble:
+          begin
+          end;
+      else
+        Value2 := VarAsType(Value2, varInteger);
       end;
-    varString,
-    varUString,
-    varOleStr: if not varIsNull(Value2) then Value2 := VarAsType(Value2, varString)
-               else if IsForOp then  Value2:='';
-    varSingle,
-    varCurrency,
-    varDouble:
-      case varType(Value2) of
-         varUString, varString,varOleStr: Value2 := StrToFloatEx(Value2);
-         varNull: if isForOp then Value2:=0.0;
-        else Value2 := VarAsType(Value2, varDouble);
+    varString, varUString, varOleStr:
+      if not VarIsNull(Value2) then
+        Value2 := VarAsType(Value2, varString)
+      else if IsForOp then
+        Value2 := '';
+    varSingle, varCurrency, varDouble:
+      case VarType(Value2) of
+        varUString, varString, varOleStr:
+          Value2 := StrToFloatEx(Value2);
+        varNull:
+          if IsForOp then
+            Value2 := 0.0;
+      else
+        Value2 := VarAsType(Value2, varDouble);
       end;
     varBoolean:
       case VarType(Value2) of
-        varByte,varInteger, varDouble:
-          Value2 := Value2<>0;
-        varString,varOleStr, varUString:
-          Value2 := StrToFloatEx(Value2)<>0;
+        varByte, varInteger, varDouble:
+          Value2 := Value2 <> 0;
+        varString, varOleStr, varUString:
+          Value2 := StrToFloatEx(Value2) <> 0;
         varBoolean:
         else
           raise EParseException.Create(rsTypesmismatch);
       end;
-    varEmpty,
-    varNull:if not VarIsNull(Value2) then begin
-             if IsForOp then CheckTypes(Value2,Value1,TRUE)
-             else raise EParseException.Create(rsTypesmismatch)
-            end  else Exit;
-    else
-      raise EParseException.Create(rsTypesmismatch);
+    varEmpty, varNull:
+      if not VarIsNull(Value2) then
+      begin
+        if IsForOp then
+          CheckTypes(Value2, Value1, TRUE)
+        else
+          raise EParseException.Create(rsTypesmismatch)
+      end
+      else
+        exit;
+  else
+    raise EParseException.Create(rsTypesmismatch);
   end;
 end;
 
-function TParser.EvalFunction(const ParseItem: TParseItem):Variant;
-var Func: TFunction;
-    Args: Array of Variant;
-    i,Count: Integer;
+function TParser.EvalFunction(const ParseItem: TParseItem): Variant;
+var
+  Func: TFunction;
+  Args: Array of Variant;
+  i, Count: Integer;
 
 begin
-  Func:= GetFunction(ParseItem.ItemValue);
+  Func := GetFunction(ParseItem.ItemValue);
 
   if Assigned(Func) then
   begin
-    Count:= FParseStack.Pop;
+    Count := FParseStack.Pop;
     SetLength(Args, Count);
-    for i:= count -1 downto 0 do
-      Args[i]:= FparseStack.Pop;
+    for i := Count - 1 downto 0 do
+      Args[i] := FParseStack.Pop;
 
-    Result:= Func(Self, Args);
+    result := Func(Self, Args);
   end
   else
-    raise EParseException.CreateFmt(rsFunctionNotFound,[ParseItem.ItemValue]);
+    raise EParseException.CreateFmt(rsFunctionNotFound, [ParseItem.ItemValue]);
 end;
 
 // Calculate an equation
+
+function TParser.Evalute<T>: T;
+var
+  res: Variant;
+begin
+  res := Evalute;
+  if Variants.VarIsNull(res) Or VarIsEmpty(res) then
+    result := default (T)
+  else
+    result := TValue.FromVariant(res).AsType<T>;
+end;
+
 function TParser.Evalute: Variant;
 var
-  I,params: Integer;
+  i, Params: Integer;
   Value1, Value2: Variant;
   Op: String;
-  S:String;
-  l:TStringList;
+  S: String;
+  l: TStringList;
 
-  function CheckForNull:Boolean;
+  function CheckForNull: Boolean;
   begin
-    result:=varIsNull(Value1) or varIsNull(Value2)
+    result := VarIsNull(Value1) or VarIsNull(Value2)
   end;
 
 begin
-  //FStackCount := 0;
+  // FStackCount := 0;
   FParseStack.Clear;
-  FParseStack.Capacity:=10;
-  for I := 0 to FParseItems.Count-1 do begin
-    case FParseItems[I].ItemType of
-      ptFunction: Push(EvalFunction(FParseItems[i]));
-      ptNull: Push(NULL);
-      ptVariable: Push(DoGetVar(FParseItems[i].ItemValue));
-      ptFloat, ptInteger, ptString, ptBoolean: Push(FParseItems[I].ItemValue);
-      ptDelim: begin
-          Op := VarAsType(FParseItems[I].ItemValue, varString);
-          if Op[1] in ['+','-','*','/','%'] then begin
-            Value2 := Pop; Value1 := Pop;
-            CheckTypes(Value1, Value2,TRUE);
+  FParseStack.Capacity := 10;
+  for i := 0 to FParseItems.Count - 1 do
+  begin
+    case FParseItems[i].ItemType of
+      ptFunction:
+        Push(EvalFunction(FParseItems[i]));
+      ptNull:
+        Push(NULL);
+      ptVariable:
+        Push(DoGetVar(FParseItems[i].ItemValue));
+      ptFloat, ptInteger, ptString, ptBoolean:
+        Push(FParseItems[i].ItemValue);
+      ptDelim:
+        begin
+          Op := VarAsType(FParseItems[i].ItemValue, varString);
+          if Op[1] in ['+', '-', '*', '/', '%'] then
+          begin
+            Value2 := Pop;
+            Value1 := Pop;
+            CheckTypes(Value1, Value2, TRUE);
             case Op[1] of
-              '+': Push(Value1 + Value2);
-              '-': Push(Value1 - Value2);
-              '*': Push(Value1 * Value2);
-              '/': Push(Value1 / Value2);
-              '%': Push(Value1 mod Value2);
+              '+':
+                Push(Value1 + Value2);
+              '-':
+                Push(Value1 - Value2);
+              '*':
+                Push(Value1 * Value2);
+              '/':
+                Push(Value1 / Value2);
+              '%':
+                Push(Value1 mod Value2);
             end;
             continue;
           end;
 
-          if (Op='=')or(Op='<')or(Op='>') then begin
-            Value2 := Pop; Value1 := Pop;
-            if not CheckForNull then CheckTypes(Value1, Value2);
-            if (varType(value1)=varString) or (varType(value1)=varOleStr) Or (varType(value1)=varUString)then
-                value1:=AnsiUpperCase(value1);
-            if (varType(value2)=varString) or (varType(value2)=varOleStr) Or (varType(value1)=varUString) then
-                value2:=AnsiUpperCase(value2);
-            case Op[1] of
-              '=': if varIsNull(value1) or varIsNull(value2) then
-                      Push(varIsNull(value1) and varIsNull(value2))
-                   else Push(Value1 = Value2);
-              '<': if CheckForNull then Push(FALSE) else Push(Value1 < Value2);
-              '>': if CheckForNull then Push(FALSE) else Push(Value1 > Value2);
-            end;
-            continue;
-          end;
-
-          if (Op='>=')or(Op='<=')or(Op='<>') then begin
-            Value2 := Pop; Value1 := Pop;
-            if CheckForNull then
-              if Op='<>' then Push(NOT (VarIsNull(value1) and VarIsNull(Value2)))
-              else Push(FALSE)
-            else begin
+          if (Op = '=') or (Op = '<') or (Op = '>') then
+          begin
+            Value2 := Pop;
+            Value1 := Pop;
+            if not CheckForNull then
               CheckTypes(Value1, Value2);
-              if (varType(value1)=varString) or (varType(value1)=varOleStr) Or (varType(value1)=varUString) then
-                value1:=AnsiUpperCase(value1);
-              if (varType(value2)=varString) or (varType(value2)=varOleStr) Or (varType(value1)=varUString) then
-                value2:=AnsiUpperCase(value2);
-              if Op='>=' then Push(Value1 >= Value2);
-              if Op='<=' then Push(Value1 <= Value2);
-              if Op='<>' then Push(Value1 <> Value2);
+            if (VarType(Value1) = varString) or (VarType(Value1) = varOleStr) Or
+              (VarType(Value1) = varUString) then
+              Value1 := AnsiUpperCase(Value1);
+            if (VarType(Value2) = varString) or (VarType(Value2) = varOleStr) Or
+              (VarType(Value1) = varUString) then
+              Value2 := AnsiUpperCase(Value2);
+            case Op[1] of
+              '=':
+                if VarIsNull(Value1) or VarIsNull(Value2) then
+                  Push(VarIsNull(Value1) and VarIsNull(Value2))
+                else
+                  Push(Value1 = Value2);
+              '<':
+                if CheckForNull then
+                  Push(FALSE)
+                else
+                  Push(Value1 < Value2);
+              '>':
+                if CheckForNull then
+                  Push(FALSE)
+                else
+                  Push(Value1 > Value2);
             end;
             continue;
           end;
 
-          if (Op='IN') then begin
-             l:=TStringlist.create;
-             try
-               for Params:=1 to Integer(Pop) do begin
-                 Value1:=Pop; if varIsNull(Value1) then Value1:='NULL';
-                 l.Add(AnsiUpperCase(Value1));
-               end;
-               Value1:=Pop; if varIsNull(Value1) then Value1:='NULL';
-               Push(l.IndexOf(AnsiUpperCase(VarToStr(Value1)))<>-1);
-             finally
-               l.free;
-             end;
-             continue;
+          if (Op = '>=') or (Op = '<=') or (Op = '<>') then
+          begin
+            Value2 := Pop;
+            Value1 := Pop;
+            if CheckForNull then
+              if Op = '<>' then
+                Push(NOT(VarIsNull(Value1) and VarIsNull(Value2)))
+              else
+                Push(FALSE)
+            else
+            begin
+              CheckTypes(Value1, Value2);
+              if (VarType(Value1) = varString) or (VarType(Value1) = varOleStr)
+                Or (VarType(Value1) = varUString) then
+                Value1 := AnsiUpperCase(Value1);
+              if (VarType(Value2) = varString) or (VarType(Value2) = varOleStr)
+                Or (VarType(Value1) = varUString) then
+                Value2 := AnsiUpperCase(Value2);
+              if Op = '>=' then
+                Push(Value1 >= Value2);
+              if Op = '<=' then
+                Push(Value1 <= Value2);
+              if Op = '<>' then
+                Push(Value1 <> Value2);
+            end;
+            continue;
           end;
 
-          if (Op='AND')or(Op='OR')or(Op='XOR') then begin
-            Value1 := Pop; Value2 := Pop;
-            if Op='AND' then Push(Value1 and Value2);
-            if Op='OR' then Push(Value1 or Value2);
-            if Op='XOR' then
+          if (Op = 'IN') then
+          begin
+            l := TStringList.Create;
+            try
+              for Params := 1 to Integer(Pop) do
+              begin
+                Value1 := Pop;
+                if VarIsNull(Value1) then
+                  Value1 := 'NULL';
+                l.Add(AnsiUpperCase(Value1));
+              end;
+              Value1 := Pop;
+              if VarIsNull(Value1) then
+                Value1 := 'NULL';
+              Push(l.IndexOf(AnsiUpperCase(VarToStr(Value1))) <> -1);
+            finally
+              l.Free;
+            end;
+            continue;
+          end;
+
+          if (Op = 'AND') or (Op = 'OR') or (Op = 'XOR') then
+          begin
+            Value1 := Pop;
+            Value2 := Pop;
+            if Op = 'AND' then
+              Push(Value1 and Value2);
+            if Op = 'OR' then
+              Push(Value1 or Value2);
+            if Op = 'XOR' then
               Push((not Value1 and Value2) or (Value1 and not Value2));
             continue;
           end;
 
-          if Op='~' then begin
+          if Op = '~' then
+          begin
             Value1 := Pop;
             Push(-Value1);
             continue;
           end;
 
-          if Op='NOT' then begin
+          if Op = 'NOT' then
+          begin
             Value1 := Pop;
-            Value2 := True;
+            Value2 := TRUE;
             CheckTypes(Value2, Value1);
             Push(not Value1);
             continue;
           end;
 
-          if (Op='^') then begin
-            Value2 := VarAsType(Pop,varDouble);
-            Value1 := VarAsType(Pop,varDouble);
-            Push(exp(Value2*ln(Value1)));
+          if (Op = '^') then
+          begin
+            Value2 := VarAsType(Pop, varDouble);
+            Value1 := VarAsType(Pop, varDouble);
+            Push(exp(Value2 * ln(Value1)));
             continue;
           end;
 
-          if (Op='LIKE') then begin
+          if (Op = 'LIKE') then
+          begin
             Value2 := VarAsType(Pop, varString);
-            Value1:=Pop;
-            if VarIsNull(Value1) then Push(FALSE)
-            else begin
-              if varIsArray(Value1) then begin
-                SetLength(S,VarArrayHighBound(Value1,1)+1);
-                Move(varArrayLock(value1)^,PChar(S)^,Length(S));
+            Value1 := Pop;
+            if VarIsNull(Value1) then
+              Push(FALSE)
+            else
+            begin
+              if varIsArray(Value1) then
+              begin
+                SetLength(S, VarArrayHighBound(Value1, 1) + 1);
+                Move(varArrayLock(Value1)^, PChar(S)^, Length(S));
                 VarArrayUnLock(Value1);
-                Push(IsMatch(Value2,S));
+                Push(IsMatch(Value2, S));
                 {
-                Value2:=UpperCase(Copy(Value2,2,Length(value2)-2));
-                Push(Pos(Value2,UpperCase(S))<>0)}
-              end else //Value1 := VarAsType(Value1, varString);
-                Push(IsMatch(Value2,Value1));
+                  Value2:=UpperCase(Copy(Value2,2,Length(value2)-2));
+                  Push(Pos(Value2,UpperCase(S))<>0) }
+              end
+              else // Value1 := VarAsType(Value1, varString);
+                Push(IsMatch(Value2, Value1));
             end;
             continue;
           end;
-          raise  EParseException.CreateFmt('Operación invalida (%s)',[Op]);
+          raise EParseException.CreateFmt('Operación invalida (%s)', [Op]);
         end;
     end;
   end;
-  Result := Pop;
+  result := Pop;
 
-  if FParseStack.Count>0 then
+  if FParseStack.Count > 0 then
     raise EParseException.Create('Error de evaluación');
 end;
 
@@ -842,7 +842,7 @@ end;
 // Pop value from stack
 function TParser.Pop: Variant;
 begin
- result:= FParseStack.Pop
+  result := FParseStack.Pop
 end;
 
 // Clear all variables and equation
@@ -850,10 +850,10 @@ procedure TParser.Clear;
 begin
   FParseStack.Clear;
   FParseItems.Clear;
-  FparseStack.Capacity:=10;
-  FparseItems.Capacity:=10;
+  FParseStack.Capacity := 10;
+  FParseItems.Capacity := 10;
   FVariables.Clear;
-  FVariables.Capacity:=5;
+  FVariables.Capacity := 5;
   FEquation := '';
 end;
 
@@ -861,7 +861,7 @@ end;
 class procedure TParser.AddFunction(const FuncName: String;
   FunctionCode: TFunction);
 begin
-  FFunctions.Add(Lowercase(FuncName), FunctionCode);
+  FFunctions.Add(LowerCase(FuncName), FunctionCode);
 end;
 
 procedure TParser.AddLocalFunction(const Name: String; AFunction: TFunction);
@@ -871,16 +871,19 @@ end;
 
 function TParser.CheckFunc(var Buffer: String): Boolean;
 var
-  I: Integer;
+  i: Integer;
   Token: String;
 begin
-  I := 1;
-  while (I<=Length(Buffer)) and (Buffer[I] in [' ',#9,#10,#13]) do
-    Inc(I);
-  if (i<=length(Buffer)) and (Buffer[I]='(') then begin
-    Result := true;
+  i := 1;
+  while (i <= Length(Buffer)) and (Buffer[i] in [' ', #9, #10, #13]) do
+    Inc(i);
+  if (i <= Length(Buffer)) and (Buffer[i] = '(') then
+  begin
+    result := TRUE;
     ExtractToken(Buffer, Token);
-  end else Result := false;
+  end
+  else
+    result := FALSE;
 end;
 
 class destructor TParser.Destroy;
@@ -891,10 +894,11 @@ end;
 function TParser.DoGetVar(VarName: String): Variant;
 begin
   if Assigned(OnGetVar) then
-    OnGetVar(Self,VarName,Result);
+  OnGetVar(Self, VarName, Result)
+  else
+    if Assigned(FGetVar) then
+      FGetVar(Self, VarName, Result);
+
 end;
 
-
 end.
-
-
