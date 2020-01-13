@@ -3,14 +3,14 @@ A Delphi simple expression evaluator based with user functions and variables. Th
 
 Support varaibles and funcions definions.
 
-# Operators
+### Operators
 
 Supported operators:
 
 * + 
 * -
 * =
-* >=
+* \>=
 * <=
 * % (mod)
 * IN (value in array values. Array is supported with [])
@@ -18,18 +18,18 @@ Supported operators:
 * OR
 * XOR
 * NOT 
-* LIKE (see SGT.Parse.Match for details)
+* LIKE (see SGT.Parse.ZMatch.pas for details)
 
-# Simple usage
-
+### Simple usage
+```
 Begin
   Parser = TParser.Create();
-  P.Equation = '(5*7) / 2)'
+  P.Equation = '(5*7) / 2)';
   WriteLn(P.Evalute<Int>());
 End
-
-# Usage with variables
-
+```
+### Usage with variables 
+```
 procedure GetVar(sender: TParser; VarName: string; var Value: Variant);
 begin
    If (UpperCase(VarName) = 'X') Then
@@ -40,14 +40,14 @@ end;
 
 Begin
   Parser = TParser.Create(GetVar);
-  P.Equation = '(5*7) / x)'
+  P.Equation = '(5*7) / x)';
   WriteLn(P.Evalute<Int>());
 End
+```
+### Define custom functions
 
-# Define custom functions
-
-See SGT.Parser.Function for examples.
-
+See SGT.Parser.ZFunction for examples.
+```
 procedure GetVar(sender: TParser; VarName: string; var Value: Variant);
 begin
    // In a form with a dataset, you can use Value:= DataSet.FieldByName(VarName).Value
@@ -67,3 +67,4 @@ begin
     p.Equation := 'Upper(x)';
     Writeln(p.Evalute<String>);
  end;  
+```
