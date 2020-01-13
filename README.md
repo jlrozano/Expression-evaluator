@@ -1,5 +1,5 @@
 # Expression-evaluator
-A Delphi simple expression evaluator based with user functions and variables. This work is based in old Zeos parse libaries. 
+A Delphi simple expression evaluator with user functions and variables. This work is based in old Zeos parse libaries. 
 
 Support varaibles and funcions definions.
 
