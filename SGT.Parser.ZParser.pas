@@ -37,7 +37,7 @@ type
 
   TGetVar = reference to procedure (sender: TParser; VarName: string; var Value: Variant);
 
-  TFunction = function(sender: TParser; const Args: Array of Variant): Variant;
+  TFunction = reference to function(sender: TParser; const Args: Array of Variant): Variant;
 
   TParser = class
   private
@@ -218,8 +218,7 @@ begin
     ExtractToken(Buffer, Temp);
     Token := Token + Temp;
   end;
-  if (Buffer <> '') and (Token = '<') and
-    ((Buffer[1] = '=') or (Buffer[1] = '>')) then
+  if (Buffer <> '') and (Token = '<') and ((Buffer[1] = '=') or (Buffer[1] = '>')) then
   begin
     ExtractToken(Buffer, Temp);
     Token := Token + Temp;
@@ -303,8 +302,7 @@ begin
     result := 1;
   if (Temp = 'NOT') then
     result := 2;
-  if (Temp = '<') or (Temp = '>') or (Temp = '=') or (Temp = '>=') or
-    (Temp = '<=') or (Temp = '<>') then
+  if (Temp = '<') or (Temp = '>') or (Temp = '=') or (Temp = '>=') or (Temp = '<=') or (Temp = '<>') then
     result := 3;
   if (Temp[1] = '+') or (Temp[1] = '-') or (Temp = 'LIKE') then
     result := 4;
@@ -371,6 +369,7 @@ begin
   while Buffer <> '' do
   begin
     ParseType := ExtractTokenEx(Buffer, Token);
+
     if Token = '' then
       exit;
     if (Token = ')') or (Token = ',') then
@@ -378,6 +377,7 @@ begin
       PutbackToken(Buffer, Token);
       exit;
     end;
+
     if Token = '(' then
     begin
       FErrCheck := 0;
