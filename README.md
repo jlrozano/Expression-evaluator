@@ -21,7 +21,7 @@ Supported operators:
 * LIKE (see SGT.Parse.ZMatch.pas for details)
 
 ### Simple usage
-```
+```Delphi
 Begin
   Parser = TParser.Create();
   P.Equation = '(5*7) / 2)';
@@ -29,7 +29,7 @@ Begin
 End
 ```
 ### Usage with variables 
-```
+```Delphi
 procedure GetVar(sender: TParser; VarName: string; var Value: Variant);
 begin
    If (UpperCase(VarName) = 'X') Then
@@ -47,7 +47,7 @@ End
 ### Define custom functions
 
 See SGT.Parser.ZFunction for examples.
-```
+```Delphi
 procedure GetVar(sender: TParser; VarName: string; var Value: Variant);
 begin
    // In a form with a dataset, you can use Value:= DataSet.FieldByName(VarName).Value
